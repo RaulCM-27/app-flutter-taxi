@@ -1,47 +1,42 @@
-import 'package:flutter/material.dart';
+import 'package:app_taxi/services/api_service.dart';
 import 'package:app_taxi/widgets/modern_input.dart';
 import 'package:app_taxi/widgets/save_button.dart';
-import 'package:app_taxi/services/api_service.dart';
 import 'package:app_taxi/widgets/screen_header.dart';
+import 'package:flutter/material.dart';
 
-class RegisterDriverScreen extends StatefulWidget {
-  const RegisterDriverScreen({super.key});
+class RegisterTaxiScreen extends StatefulWidget {
+  const RegisterTaxiScreen({super.key});
 
   @override
-  State<RegisterDriverScreen> createState() => _RegisterDriverScreenState();
+  State<RegisterTaxiScreen> createState() => _RegisterTaxiScreenState();
 }
 
-class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController cedulaController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
+class _RegisterTaxiScreenState extends State<RegisterTaxiScreen> {
+  final TextEditingController placaController = TextEditingController();
+  final TextEditingController marcaController = TextEditingController();
+  final TextEditingController modeloController = TextEditingController();
 
   bool loading = false;
 
-  void registrarConductor() async {
+  void registrarTaxi() async {
     FocusScope.of(context).unfocus();
 
-    final nombre = nameController.text.trim();
-    final cedula = cedulaController.text.trim();
-    final telefono = int.tryParse(phoneController.text.trim());
+    final placa = placaController.text.trim();
+    final marca = marcaController.text.trim();
+    final modelo = modeloController.text.trim();
 
-    if (nombre.isEmpty || cedula.isEmpty || telefono == null) {
+    if (placa.isEmpty || marca.isEmpty || modelo.isEmpty) {
       _showMessage("Completa todos los campos correctamente");
-      return;
-    }
-
-    if (phoneController.text.length < 10) {
-      _showMessage("Teléfono inválido");
       return;
     }
 
     setState(() => loading = true);
 
     try {
-      final result = await ApiService.registerDriver(
-        nombre: nombre,
-        cedula: cedula,
-        telefono: telefono,
+      final result = await ApiService.registerTaxi(
+        placa: placa,
+        marca: marca,
+        modelo: modelo,
       );
 
       if (!mounted) return;
@@ -69,9 +64,9 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
 
   @override
   void dispose() {
-    nameController.dispose();
-    cedulaController.dispose();
-    phoneController.dispose();
+    placaController.dispose();
+    marcaController.dispose();
+    modeloController.dispose();
     super.dispose();
   }
 
@@ -84,13 +79,11 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
         // ✅ AQUÍ ESTÁ LA CLAVE
         child: Column(
           children: [
-            // 🔵 HEADER
             ScreenHeader(
-              title: 'Nuevo Conductor',
+              title: "Nuevo Taxi",
               onBack: () => Navigator.pop(context),
             ),
 
-            // 🔽 CONTENIDO
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -98,7 +91,7 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "Registrar Conductor",
+                      "Registrar Taxi",
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -106,7 +99,7 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      "La cédula será el ID único del conductor",
+                      "La placa será el ID único del taxi",
                       style: TextStyle(color: Colors.black54),
                     ),
                     const SizedBox(height: 20),
@@ -120,28 +113,26 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
                       child: Column(
                         children: [
                           ModernInput(
-                            label: "Nombre Completo *",
-                            hint: "Jose Perez",
-                            controller: nameController,
+                            label: "Placa *",
+                            hint: "ABC123",
+                            controller: placaController,
                           ),
                           const SizedBox(height: 16),
                           ModernInput(
-                            label: "Cédula *",
-                            hint: "123456789",
-                            controller: cedulaController,
-                            keyboardType: TextInputType.number,
+                            label: "Marca *",
+                            hint: "Toyota",
+                            controller: marcaController,
                           ),
                           const SizedBox(height: 16),
                           ModernInput(
-                            label: "Teléfono *",
-                            hint: "3001234567",
-                            controller: phoneController,
-                            keyboardType: TextInputType.phone,
+                            label: "Modelo *",
+                            hint: "Corolla",
+                            controller: modeloController,
                           ),
                           const SizedBox(height: 24),
                           SaveButton(
                             loading: loading,
-                            onPressed: registrarConductor,
+                            onPressed: registrarTaxi,
                           ),
                         ],
                       ),

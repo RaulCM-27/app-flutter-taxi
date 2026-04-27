@@ -1,4 +1,3 @@
-/// Used in: register_driver_screen.dart, home_screen.dart
 import 'package:flutter/material.dart';
 
 // ─────────────────────────────────────────────
@@ -6,13 +5,22 @@ import 'package:flutter/material.dart';
 // ─────────────────────────────────────────────
 class BottomNavBar extends StatelessWidget {
   final int selectedIndex;
+  final Function(int) onItemTapped;
 
-  const BottomNavBar({super.key, this.selectedIndex = 0});
+  const BottomNavBar({
+    super.key,
+    required this.selectedIndex,
+    required this.onItemTapped,
+  });
 
   @override
   Widget build(BuildContext context) {
     return NavigationBar(
       selectedIndex: selectedIndex,
+
+      // ✅ AQUÍ ESTÁ LA CLAVE (ANTES LO TENÍAS MAL)
+      onDestinationSelected: onItemTapped,
+
       destinations: const [
         NavigationDestination(icon: Icon(Icons.home), label: 'Inicio'),
         NavigationDestination(icon: Icon(Icons.history), label: 'Historial'),
