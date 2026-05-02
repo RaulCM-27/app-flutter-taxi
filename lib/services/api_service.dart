@@ -11,25 +11,36 @@ class ApiResult {
 }
 
 class ApiService {
-  // ✅ cambia la URL según el entorno
   static const String baseUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'http://10.0.2.2:8080', // local por defecto
+    defaultValue: 'http://10.0.2.2:8080',
   );
 
-  // ✅ guarda el token
-  static Future<void> saveToken(String token) async {
+  // ✅ guarda ambos tokens
+  static Future<void> saveTokens(String token, String refreshToken) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
+    await prefs.setString('refreshToken', refreshToken);
   }
 
-  // ✅ obtiene el token
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('token');
   }
 
-  // ✅ headers con token para rutas protegidas
+  static Future<String?> getRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('refreshToken');
+  }
+
+  // ✅ borra ambos tokens
+  static Future<void> _clearTokens() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    await prefs.remove('refreshToken');
+  }
+
+  // ✅ headers con access token
   static Future<Map<String, String>> _authHeaders() async {
     final token = await getToken();
     return {
@@ -38,10 +49,54 @@ class ApiService {
     };
   }
 
+  // ✅ renueva el access token con el refresh token
+  static Future<bool> renewToken() async {
+    final refreshToken = await getRefreshToken();
+    if (refreshToken == null) return false;
+
+    try {
+      final response = await http.post(
+        Uri.parse("$baseUrl/auth/refresh"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"refreshToken": refreshToken}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'token',
+          data['token'],
+        ); // ✅ solo actualiza el access token
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Error renovando token: $e");
+    }
+    return false;
+  }
+
+  // ✅ maneja el 401 automáticamente
+  static Future<http.Response?> _retryWithRefresh(
+    Future<http.Response> Function() request,
+  ) async {
+    var response = await request();
+
+    if (response.statusCode == 401) {
+      final renewed = await renewToken();
+      if (renewed) {
+        response = await request(); // reintenta con nuevo token
+      } else {
+        await _clearTokens();
+        return null; // señal de sesión expirada
+      }
+    }
+    return response;
+  }
+
   // LOGIN
   static Future<ApiResult> login(String username, String password) async {
     final url = Uri.parse("$baseUrl/auth/login");
-
     try {
       final response = await http.post(
         url,
@@ -54,7 +109,7 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        await saveToken(data['token']); // ✅ guarda el token
+        await saveTokens(data['token'], data['refreshToken']); // ✅ guarda ambos
         return ApiResult(success: true, message: "Login exitoso");
       } else if (response.statusCode == 401) {
         return ApiResult(success: false, message: "Contraseña incorrecta");
@@ -67,29 +122,27 @@ class ApiService {
         );
       }
     } catch (e) {
-      return ApiResult(
-        success: false,
-        message: "Error de conexión. Verifica tu internet.",
-      );
+      return ApiResult(success: false, message: "Error de conexión");
     }
+  }
+
+  // LOGOUT
+  static Future<void> logout() async {
+    await _clearTokens();
   }
 
   // CONDUCTORES - GET
   static Future<ApiResult> getConductores() async {
     final url = Uri.parse("$baseUrl/api/conductores");
     try {
-      final response = await http.get(
-        url,
-        headers: await _authHeaders(),
-      ); // ✅ token
-      if (response.statusCode == 200) {
+      final response = await _retryWithRefresh(
+        () async => http.get(url, headers: await _authHeaders()),
+      );
+      if (response == null)
+        return ApiResult(success: false, message: "SESION_EXPIRADA");
+      if (response.statusCode == 200)
         return ApiResult(success: true, message: response.body);
-      } else {
-        return ApiResult(
-          success: false,
-          message: "Error ${response.statusCode}",
-        );
-      }
+      return ApiResult(success: false, message: "Error ${response.statusCode}");
     } catch (e) {
       return ApiResult(success: false, message: "Error de conexión");
     }
@@ -103,15 +156,19 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/conductores");
     try {
-      final response = await http.post(
-        url,
-        headers: await _authHeaders(), // ✅ token
-        body: jsonEncode({
-          "nombre": nombre,
-          "cedula": cedula,
-          "telefono": telefono,
-        }),
+      final response = await _retryWithRefresh(
+        () async => http.post(
+          url,
+          headers: await _authHeaders(),
+          body: jsonEncode({
+            "nombre": nombre,
+            "cedula": cedula,
+            "telefono": telefono,
+          }),
+        ),
       );
+      if (response == null)
+        return ApiResult(success: false, message: "SESION_EXPIRADA");
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 201 || response.statusCode == 200) {
         return ApiResult(
@@ -123,12 +180,11 @@ class ApiService {
           success: false,
           message: data?["message"] ?? "La cédula ya está registrada",
         );
-      } else {
-        return ApiResult(
-          success: false,
-          message: data?["message"] ?? "Error ${response.statusCode}",
-        );
       }
+      return ApiResult(
+        success: false,
+        message: data?["message"] ?? "Error ${response.statusCode}",
+      );
     } catch (e) {
       return ApiResult(success: false, message: "Error de conexión");
     }
@@ -143,15 +199,19 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/conductores/$id");
     try {
-      final response = await http.put(
-        url,
-        headers: await _authHeaders(), // ✅ token
-        body: jsonEncode({
-          "nombre": nombre,
-          "cedula": cedula,
-          "telefono": telefono,
-        }),
+      final response = await _retryWithRefresh(
+        () async => http.put(
+          url,
+          headers: await _authHeaders(),
+          body: jsonEncode({
+            "nombre": nombre,
+            "cedula": cedula,
+            "telefono": telefono,
+          }),
+        ),
       );
+      if (response == null)
+        return ApiResult(success: false, message: "SESION_EXPIRADA");
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         return ApiResult(
@@ -163,12 +223,11 @@ class ApiService {
           success: false,
           message: data?["message"] ?? "Conductor no encontrado",
         );
-      } else {
-        return ApiResult(
-          success: false,
-          message: data?["message"] ?? "Error ${response.statusCode}",
-        );
       }
+      return ApiResult(
+        success: false,
+        message: data?["message"] ?? "Error ${response.statusCode}",
+      );
     } catch (e) {
       return ApiResult(success: false, message: "Error de conexión");
     }
@@ -178,18 +237,14 @@ class ApiService {
   static Future<ApiResult> getTaxis() async {
     final url = Uri.parse("$baseUrl/api/taxis");
     try {
-      final response = await http.get(
-        url,
-        headers: await _authHeaders(),
-      ); // ✅ token
-      if (response.statusCode == 200) {
+      final response = await _retryWithRefresh(
+        () async => http.get(url, headers: await _authHeaders()),
+      );
+      if (response == null)
+        return ApiResult(success: false, message: "SESION_EXPIRADA");
+      if (response.statusCode == 200)
         return ApiResult(success: true, message: response.body);
-      } else {
-        return ApiResult(
-          success: false,
-          message: "Error ${response.statusCode}",
-        );
-      }
+      return ApiResult(success: false, message: "Error ${response.statusCode}");
     } catch (e) {
       return ApiResult(success: false, message: "Error de conexión");
     }
@@ -203,11 +258,15 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/taxis");
     try {
-      final response = await http.post(
-        url,
-        headers: await _authHeaders(), // ✅ token
-        body: jsonEncode({"placa": placa, "marca": marca, "modelo": modelo}),
+      final response = await _retryWithRefresh(
+        () async => http.post(
+          url,
+          headers: await _authHeaders(),
+          body: jsonEncode({"placa": placa, "marca": marca, "modelo": modelo}),
+        ),
       );
+      if (response == null)
+        return ApiResult(success: false, message: "SESION_EXPIRADA");
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 201 || response.statusCode == 200) {
         return ApiResult(
@@ -219,12 +278,11 @@ class ApiService {
           success: false,
           message: data?["message"] ?? "La placa ya está registrada",
         );
-      } else {
-        return ApiResult(
-          success: false,
-          message: data?["message"] ?? "Error ${response.statusCode}",
-        );
       }
+      return ApiResult(
+        success: false,
+        message: data?["message"] ?? "Error ${response.statusCode}",
+      );
     } catch (e) {
       return ApiResult(success: false, message: "Error de conexión");
     }

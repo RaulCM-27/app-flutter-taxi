@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:app_taxi/services/api_service.dart';
 import 'package:app_taxi/utils/constants.dart';
 import 'package:app_taxi/widgets/form_card.dart';
-import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,17 +29,15 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() => loading = true);
-
     final result = await ApiService.login(username, password);
-
     if (!mounted) return;
-
     setState(() => loading = false);
 
     if (result.success) {
-      Navigator.pushReplacement(
+      Navigator.pushReplacementNamed(
         context,
-        MaterialPageRoute(builder: (_) => HomeScreen(username: username)),
+        '/home',
+        arguments: username, // ✅
       );
     } else {
       ScaffoldMessenger.of(

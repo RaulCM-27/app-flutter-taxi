@@ -1,4 +1,6 @@
 import 'package:app_taxi/screens/login_screen.dart';
+import 'package:app_taxi/screens/home_screen.dart';
+import 'package:app_taxi/utils/session_manager.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -10,6 +12,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(home: LoginScreen());
+    return MaterialApp(
+      navigatorKey: SessionManager.navigatorKey, // ✅
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => LoginScreen(),
+        '/home': (context) => HomeScreen(username: ''),
+      },
+    );
   }
 }
