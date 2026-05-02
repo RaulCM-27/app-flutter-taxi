@@ -138,10 +138,12 @@ class ApiService {
       final response = await _retryWithRefresh(
         () async => http.get(url, headers: await _authHeaders()),
       );
-      if (response == null)
+      if (response == null) {
         return ApiResult(success: false, message: "SESION_EXPIRADA");
-      if (response.statusCode == 200)
+      }
+      if (response.statusCode == 200) {
         return ApiResult(success: true, message: response.body);
+      }
       return ApiResult(success: false, message: "Error ${response.statusCode}");
     } catch (e) {
       return ApiResult(success: false, message: "Error de conexión");
@@ -167,8 +169,9 @@ class ApiService {
           }),
         ),
       );
-      if (response == null)
+      if (response == null) {
         return ApiResult(success: false, message: "SESION_EXPIRADA");
+      }
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 201 || response.statusCode == 200) {
         return ApiResult(
@@ -210,8 +213,9 @@ class ApiService {
           }),
         ),
       );
-      if (response == null)
+      if (response == null) {
         return ApiResult(success: false, message: "SESION_EXPIRADA");
+      }
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         return ApiResult(
@@ -240,10 +244,12 @@ class ApiService {
       final response = await _retryWithRefresh(
         () async => http.get(url, headers: await _authHeaders()),
       );
-      if (response == null)
+      if (response == null) {
         return ApiResult(success: false, message: "SESION_EXPIRADA");
-      if (response.statusCode == 200)
+      }
+      if (response.statusCode == 200) {
         return ApiResult(success: true, message: response.body);
+      }
       return ApiResult(success: false, message: "Error ${response.statusCode}");
     } catch (e) {
       return ApiResult(success: false, message: "Error de conexión");
@@ -265,8 +271,9 @@ class ApiService {
           body: jsonEncode({"placa": placa, "marca": marca, "modelo": modelo}),
         ),
       );
-      if (response == null)
+      if (response == null) {
         return ApiResult(success: false, message: "SESION_EXPIRADA");
+      }
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 201 || response.statusCode == 200) {
         return ApiResult(
