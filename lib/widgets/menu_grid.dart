@@ -1,4 +1,5 @@
 /// Used in: home_screen.dart
+import 'package:app_taxi/screens/register_taxi_screen.dart';
 import 'package:flutter/material.dart';
 import 'menu_card.dart';
 import '../screens/register_driver_screen.dart';
@@ -16,6 +17,13 @@ class MenuGrid extends StatelessWidget {
     );
   }
 
+  void _navigateToRegisterTaxi(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RegisterTaxiScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -28,17 +36,17 @@ class MenuGrid extends StatelessWidget {
         childAspectRatio: 1.5,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          MenuCard(icon: Icons.local_taxi, label: 'Nuevo Taxi'),
+          MenuCard(
+            icon: Icons.local_taxi,
+            label: 'Nuevo Taxi',
+            onTap: () => _navigateToRegisterTaxi(context),
+          ),
           MenuCard(
             icon: Icons.person_add,
             label: 'Nuevo Conductor',
             onTap: () => _navigateToRegisterDriver(context),
           ),
-          MenuCard(
-            icon: Icons.swap_horiz,
-            label: 'Asignar Turno',
-            backgroundColor: Color(0xFFF4B942),
-          ),
+          MenuCard(icon: Icons.swap_horiz, label: 'Asignar Turno'),
           MenuCard(icon: Icons.description, label: 'Reportes'),
         ],
       ),

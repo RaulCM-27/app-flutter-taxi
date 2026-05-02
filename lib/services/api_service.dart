@@ -1,8 +1,8 @@
 import "dart:convert";
 import "package:flutter/foundation.dart";
 import "package:http/http.dart" as http;
+import "package:shared_preferences/shared_preferences.dart";
 
-/// Resultado genérico para respuestas de la API
 class ApiResult {
   final bool success;
   final String message;
@@ -11,8 +11,34 @@ class ApiResult {
 }
 
 class ApiService {
-  static const String baseUrl = "http://10.0.2.2:8080";
+  // ✅ cambia la URL según el entorno
+  static const String baseUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'http://10.0.2.2:8080', // local por defecto
+  );
 
+  // ✅ guarda el token
+  static Future<void> saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', token);
+  }
+
+  // ✅ obtiene el token
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token');
+  }
+
+  // ✅ headers con token para rutas protegidas
+  static Future<Map<String, String>> _authHeaders() async {
+    final token = await getToken();
+    return {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer $token",
+    };
+  }
+
+  // LOGIN
   static Future<ApiResult> login(String username, String password) async {
     final url = Uri.parse("$baseUrl/auth/login");
 
@@ -27,10 +53,9 @@ class ApiService {
       debugPrint("BODY: ${response.body}");
 
       if (response.statusCode == 200) {
-        return ApiResult(
-          success: true,
-          message: response.body, // 👈 NO jsonDecode
-        );
+        final data = jsonDecode(response.body);
+        await saveToken(data['token']); // ✅ guarda el token
+        return ApiResult(success: true, message: "Login exitoso");
       } else if (response.statusCode == 401) {
         return ApiResult(success: false, message: "Contraseña incorrecta");
       } else if (response.statusCode == 404) {
@@ -49,44 +74,55 @@ class ApiService {
     }
   }
 
+  // CONDUCTORES - GET
+  static Future<ApiResult> getConductores() async {
+    final url = Uri.parse("$baseUrl/api/conductores");
+    try {
+      final response = await http.get(
+        url,
+        headers: await _authHeaders(),
+      ); // ✅ token
+      if (response.statusCode == 200) {
+        return ApiResult(success: true, message: response.body);
+      } else {
+        return ApiResult(
+          success: false,
+          message: "Error ${response.statusCode}",
+        );
+      }
+    } catch (e) {
+      return ApiResult(success: false, message: "Error de conexión");
+    }
+  }
+
+  // CONDUCTORES - POST
   static Future<ApiResult> registerDriver({
     required String nombre,
     required String cedula,
     required int telefono,
   }) async {
     final url = Uri.parse("$baseUrl/api/conductores");
-
     try {
       final response = await http.post(
         url,
-        headers: {"Content-Type": "application/json"},
+        headers: await _authHeaders(), // ✅ token
         body: jsonEncode({
           "nombre": nombre,
           "cedula": cedula,
           "telefono": telefono,
         }),
       );
-
-      debugPrint("STATUS: ${response.statusCode}");
-      debugPrint("BODY: ${response.body}");
-
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
-
       if (response.statusCode == 201 || response.statusCode == 200) {
         return ApiResult(
           success: true,
-          message: data?["message"] ?? "Conductor registrado correctamente",
+          message: data?["message"] ?? "Conductor registrado",
         );
       } else if (response.statusCode == 409) {
         return ApiResult(
           success: false,
           message: data?["message"] ?? "La cédula ya está registrada",
         );
-      } else if (response.statusCode == 400) {
-        return ApiResult(
-          success: false,
-          message: data?["message"] ?? "Datos inválidos",
-        );
       } else {
         return ApiResult(
           success: false,
@@ -98,98 +134,7 @@ class ApiService {
     }
   }
 
-  static Future<ApiResult> registerTaxi({
-    required String placa,
-    required String marca,
-    required String modelo,
-  }) async {
-    final url = Uri.parse("$baseUrl/api/taxis");
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"placa": placa, "marca": marca, "modelo": modelo}),
-      );
-
-      debugPrint("STATUS: ${response.statusCode}");
-      debugPrint("BODY: ${response.body}");
-
-      final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        return ApiResult(
-          success: true,
-          message: data?["message"] ?? "Taxi registrado correctamente",
-        );
-      } else if (response.statusCode == 409) {
-        return ApiResult(
-          success: false,
-          message: data?["message"] ?? "La placa ya está registrada",
-        );
-      } else if (response.statusCode == 400) {
-        return ApiResult(
-          success: false,
-          message: data?["message"] ?? "Datos inválidos",
-        );
-      } else {
-        return ApiResult(
-          success: false,
-          message: data?["message"] ?? "Error ${response.statusCode}",
-        );
-      }
-    } catch (e) {
-      return ApiResult(success: false, message: "Error de conexión");
-    }
-  }
-
-  //OPTENER CONDUCTORES
-  static Future<ApiResult> getConductores() async {
-    final url = Uri.parse("$baseUrl/api/conductores");
-
-    try {
-      final response = await http.get(url);
-
-      debugPrint("STATUS: ${response.statusCode}");
-      debugPrint("BODY: ${response.body}");
-
-      if (response.statusCode == 200) {
-        return ApiResult(success: true, message: response.body);
-      } else {
-        return ApiResult(
-          success: false,
-          message: "Error ${response.statusCode}",
-        );
-      }
-    } catch (e) {
-      return ApiResult(success: false, message: "Error de conexión");
-    }
-  }
-
-  //OBTENER TAXIS
-  static Future<ApiResult> getTaxis() async {
-    final url = Uri.parse("$baseUrl/api/taxis");
-
-    try {
-      final response = await http.get(url);
-
-      debugPrint("STATUS: ${response.statusCode}");
-      debugPrint("BODY: ${response.body}");
-
-      if (response.statusCode == 200) {
-        return ApiResult(success: true, message: response.body);
-      } else {
-        return ApiResult(
-          success: false,
-          message: "Error ${response.statusCode}",
-        );
-      }
-    } catch (e) {
-      return ApiResult(success: false, message: "Error de conexión");
-    }
-  }
-
-  //ACTUALIZAR CONDUCTOR
+  // CONDUCTORES - PUT
   static Future<ApiResult> updateConducor({
     required int id,
     required String nombre,
@@ -197,37 +142,82 @@ class ApiService {
     required int telefono,
   }) async {
     final url = Uri.parse("$baseUrl/api/conductores/$id");
-
     try {
       final response = await http.put(
         url,
-        headers: {"Content-Type": "application/json"},
+        headers: await _authHeaders(), // ✅ token
         body: jsonEncode({
           "nombre": nombre,
           "cedula": cedula,
           "telefono": telefono,
         }),
       );
-
-      debugPrint("STATUS: ${response.statusCode}");
-      debugPrint("BODY: ${response.body}");
-
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
-
       if (response.statusCode == 200) {
         return ApiResult(
           success: true,
-          message: data?["message"] ?? "Conductor actualizado correctamente",
+          message: data?["message"] ?? "Conductor actualizado",
         );
       } else if (response.statusCode == 404) {
         return ApiResult(
           success: false,
           message: data?["message"] ?? "Conductor no encontrado",
         );
-      } else if (response.statusCode == 400) {
+      } else {
         return ApiResult(
           success: false,
-          message: data?["message"] ?? "Datos inválidos",
+          message: data?["message"] ?? "Error ${response.statusCode}",
+        );
+      }
+    } catch (e) {
+      return ApiResult(success: false, message: "Error de conexión");
+    }
+  }
+
+  // TAXIS - GET
+  static Future<ApiResult> getTaxis() async {
+    final url = Uri.parse("$baseUrl/api/taxis");
+    try {
+      final response = await http.get(
+        url,
+        headers: await _authHeaders(),
+      ); // ✅ token
+      if (response.statusCode == 200) {
+        return ApiResult(success: true, message: response.body);
+      } else {
+        return ApiResult(
+          success: false,
+          message: "Error ${response.statusCode}",
+        );
+      }
+    } catch (e) {
+      return ApiResult(success: false, message: "Error de conexión");
+    }
+  }
+
+  // TAXIS - POST
+  static Future<ApiResult> registerTaxi({
+    required String placa,
+    required String marca,
+    required String modelo,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/taxis");
+    try {
+      final response = await http.post(
+        url,
+        headers: await _authHeaders(), // ✅ token
+        body: jsonEncode({"placa": placa, "marca": marca, "modelo": modelo}),
+      );
+      final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return ApiResult(
+          success: true,
+          message: data?["message"] ?? "Taxi registrado",
+        );
+      } else if (response.statusCode == 409) {
+        return ApiResult(
+          success: false,
+          message: data?["message"] ?? "La placa ya está registrada",
         );
       } else {
         return ApiResult(
