@@ -261,14 +261,21 @@ class ApiService {
     required String placa,
     required String marca,
     required String modelo,
+    int? conductorId,
   }) async {
     final url = Uri.parse("$baseUrl/api/taxis");
     try {
+      final body = {
+        "placa": placa,
+        "marca": marca,
+        "modelo": modelo,
+        if (conductorId != null) "conductor": {"id": conductorId}, // ✅
+      };
       final response = await _retryWithRefresh(
         () async => http.post(
           url,
           headers: await _authHeaders(),
-          body: jsonEncode({"placa": placa, "marca": marca, "modelo": modelo}),
+          body: jsonEncode(body),
         ),
       );
       if (response == null) {
