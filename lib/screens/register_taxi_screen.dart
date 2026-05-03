@@ -40,9 +40,11 @@ class _RegisterTaxiScreenState extends State<RegisterTaxiScreen> {
   }
 
   void _filtrarConductores() {
+    // ✅ si ya hay un conductor seleccionado, no filtrar
+    if (conductorSeleccionado != null) return;
+
     final query = cedulaController.text.trim();
     setState(() {
-      conductorSeleccionado = null;
       if (query.isEmpty) {
         conductoresFiltrados = [];
       } else {

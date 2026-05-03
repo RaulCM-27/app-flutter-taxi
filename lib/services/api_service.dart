@@ -13,7 +13,7 @@ class ApiResult {
 class ApiService {
   static const String baseUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'http://10.0.2.2:8080',
+    defaultValue: 'https://proyecto-api-taxis.onrender.com', // ✅ cambia esto
   );
 
   // ✅ guarda ambos tokens
@@ -265,17 +265,16 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/taxis");
     try {
-      final body = {
-        "placa": placa,
-        "marca": marca,
-        "modelo": modelo,
-        if (conductorId != null) "conductor": {"id": conductorId}, // ✅
-      };
       final response = await _retryWithRefresh(
         () async => http.post(
           url,
           headers: await _authHeaders(),
-          body: jsonEncode(body),
+          body: jsonEncode({
+            "placa": placa,
+            "marca": marca,
+            "modelo": modelo,
+            "conductorId": conductorId,
+          }),
         ),
       );
       if (response == null) {
