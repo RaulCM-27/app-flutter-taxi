@@ -1,11 +1,15 @@
-import 'dart:convert';
+import 'package:flutter/material.dart';
+
 import 'package:app_taxi/models/taxi.dart';
+
 import 'package:app_taxi/services/api_service.dart';
-import 'package:app_taxi/widgets/empty_state_widget.dart';
+
+import 'package:app_taxi/screens/detail_taxi_screen.dart';
+
 import 'package:app_taxi/widgets/screen_header.dart';
 import 'package:app_taxi/widgets/search_bar_widget.dart';
 import 'package:app_taxi/widgets/taxi_card.dart';
-import 'package:flutter/material.dart';
+import 'package:app_taxi/widgets/empty_state_widget.dart';
 
 class TaxiScreen extends StatefulWidget {
   const TaxiScreen({super.key});
@@ -28,23 +32,15 @@ class TaxiScreenState extends State<TaxiScreen> {
   Future<void> fetchTaxis() async {
     setState(() => isLoading = true);
 
-    final result = await ApiService.getTaxis();
+    try {
+      final taxisList = await ApiService.getTaxis();
 
-    if (result.success) {
-      try {
-        final List data = jsonDecode(result.message);
-        final taxisList = data.map((e) => Taxi.fromJson(e)).toList();
-
-        setState(() {
-          taxis = taxisList;
-          filteredTaxis = taxisList;
-          isLoading = false;
-        });
-      } catch (e) {
-        setState(() => isLoading = false);
-        _showError("Error al procesar datos");
-      }
-    } else {
+      setState(() {
+        taxis = taxisList;
+        filteredTaxis = taxisList;
+        isLoading = false;
+      });
+    } catch (e) {
       setState(() => isLoading = false);
       _showError("Error al cargar taxis");
     }
@@ -89,7 +85,22 @@ class TaxiScreenState extends State<TaxiScreen> {
                       itemCount: filteredTaxis.length,
                       itemBuilder: (context, index) {
                         final taxi = filteredTaxis[index];
-                        return TaxiCard(key: ValueKey(taxi.placa), taxi: taxi);
+
+                        return InkWell(
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DetailTaxiScreen(taxi: taxi),
+                              ),
+                            );
+                            fetchTaxis();
+                          },
+                          child: TaxiCard(
+                            key: ValueKey(taxi.placa),
+                            taxi: taxi,
+                          ),
+                        );
                       },
                     ),
                   ),

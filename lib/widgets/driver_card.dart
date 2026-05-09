@@ -4,7 +4,10 @@ import 'package:app_taxi/models/driver.dart';
 class DriverCard extends StatelessWidget {
   final Driver driver;
 
-  const DriverCard({super.key, required this.driver});
+  const DriverCard({
+    super.key, 
+    required this.driver
+    });
 
   @override
   Widget build(BuildContext context) {

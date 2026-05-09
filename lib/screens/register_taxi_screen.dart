@@ -3,7 +3,6 @@ import 'package:app_taxi/widgets/modern_input.dart';
 import 'package:app_taxi/widgets/save_button.dart';
 import 'package:app_taxi/widgets/screen_header.dart';
 import 'package:flutter/material.dart';
-import 'dart:convert';
 
 class RegisterTaxiScreen extends StatefulWidget {
   const RegisterTaxiScreen({super.key});
@@ -32,15 +31,12 @@ class _RegisterTaxiScreenState extends State<RegisterTaxiScreen> {
 
   void _cargarConductores() async {
     final result = await ApiService.getConductores();
-    if (result.success) {
-      setState(() {
-        conductores = jsonDecode(result.message);
-      });
-    }
+    setState(() {
+      conductores = result; // List<Driver>
+    });
   }
 
   void _filtrarConductores() {
-    // ✅ si ya hay un conductor seleccionado, no filtrar
     if (conductorSeleccionado != null) return;
 
     final query = cedulaController.text.trim();
@@ -49,7 +45,9 @@ class _RegisterTaxiScreenState extends State<RegisterTaxiScreen> {
         conductoresFiltrados = [];
       } else {
         conductoresFiltrados = conductores
-            .where((c) => c['cedula'].toString().contains(query))
+            .where(
+              (c) => c.cedula.toString().contains(query),
+            ) // ✅ c.cedula no c['cedula']
             .toList();
       }
     });
@@ -58,7 +56,8 @@ class _RegisterTaxiScreenState extends State<RegisterTaxiScreen> {
   void _seleccionarConductor(dynamic conductor) {
     setState(() {
       conductorSeleccionado = conductor;
-      cedulaController.text = conductor['cedula'].toString();
+      cedulaController.text = conductor.cedula
+          .toString(); // ✅ .cedula no ['cedula']
       conductoresFiltrados = [];
     });
   }
@@ -87,7 +86,7 @@ class _RegisterTaxiScreenState extends State<RegisterTaxiScreen> {
         placa: placa,
         marca: marca,
         modelo: modelo,
-        conductorId: conductorSeleccionado['id'],
+        conductorId: conductorSeleccionado.id, // ✅ .id no ['id']
       );
 
       if (!mounted) return;
@@ -205,8 +204,8 @@ class _RegisterTaxiScreenState extends State<RegisterTaxiScreen> {
                                       Icons.person,
                                       color: Colors.blue,
                                     ),
-                                    title: Text(c['nombre']),
-                                    subtitle: Text("Cédula: ${c['cedula']}"),
+                                    title: Text(c.nombre),
+                                    subtitle: Text("Cédula: ${c.cedula}"),
                                     onTap: () => _seleccionarConductor(c),
                                   );
                                 },
@@ -233,7 +232,7 @@ class _RegisterTaxiScreenState extends State<RegisterTaxiScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    "${conductorSeleccionado['nombre']}",
+                                    "${conductorSeleccionado.nombre}",
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.green,

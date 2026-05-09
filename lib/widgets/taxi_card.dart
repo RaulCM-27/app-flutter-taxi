@@ -27,8 +27,8 @@ class TaxiCard extends StatelessWidget {
           /// Avatar con Icono de Taxi
           const CircleAvatar(
             radius: 25,
-            backgroundColor: Color(0xFFF3E5C3),
-            child: Icon(Icons.local_taxi, color: Colors.amber),
+            backgroundColor: Color(0xFF2E4E73),
+            child: Icon(Icons.local_taxi, color: Colors.white, size: 30),
           ),
 
           const SizedBox(width: 12),
@@ -57,14 +57,15 @@ class TaxiCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: Colors.grey.shade200,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Text(
-              "Activo",
-              style: TextStyle(color: Colors.blue, fontSize: 12),
-            ),
+            child: const Text("Activo"),
           ),
+
+          const SizedBox(width: 8),
+
+          const Icon(Icons.chevron_right),
         ],
       ),
     );

@@ -1,4 +1,6 @@
 import "dart:convert";
+import "package:app_taxi/models/driver.dart";
+import "package:app_taxi/models/taxi.dart";
 import "package:flutter/foundation.dart";
 import "package:http/http.dart" as http;
 import "package:shared_preferences/shared_preferences.dart";
@@ -132,21 +134,23 @@ class ApiService {
   }
 
   // CONDUCTORES - GET
-  static Future<ApiResult> getConductores() async {
+  static Future<List<Driver>> getConductores() async {
     final url = Uri.parse("$baseUrl/api/conductores");
+
     try {
       final response = await _retryWithRefresh(
         () async => http.get(url, headers: await _authHeaders()),
       );
-      if (response == null) {
-        return ApiResult(success: false, message: "SESION_EXPIRADA");
+
+      if (response != null && response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+
+        return data.map((e) => Driver.fromJson(e)).toList();
       }
-      if (response.statusCode == 200) {
-        return ApiResult(success: true, message: response.body);
-      }
-      return ApiResult(success: false, message: "Error ${response.statusCode}");
+
+      return [];
     } catch (e) {
-      return ApiResult(success: false, message: "Error de conexión");
+      return [];
     }
   }
 
@@ -216,7 +220,9 @@ class ApiService {
       if (response == null) {
         return ApiResult(success: false, message: "SESION_EXPIRADA");
       }
+
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+
       if (response.statusCode == 200) {
         return ApiResult(
           success: true,
@@ -238,21 +244,23 @@ class ApiService {
   }
 
   // TAXIS - GET
-  static Future<ApiResult> getTaxis() async {
+  static Future<List<Taxi>> getTaxis() async {
     final url = Uri.parse("$baseUrl/api/taxis");
+
     try {
       final response = await _retryWithRefresh(
         () async => http.get(url, headers: await _authHeaders()),
       );
-      if (response == null) {
-        return ApiResult(success: false, message: "SESION_EXPIRADA");
+
+      if (response != null && response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+
+        return data.map((e) => Taxi.fromJson(e)).toList();
       }
-      if (response.statusCode == 200) {
-        return ApiResult(success: true, message: response.body);
-      }
-      return ApiResult(success: false, message: "Error ${response.statusCode}");
+
+      return [];
     } catch (e) {
-      return ApiResult(success: false, message: "Error de conexión");
+      return [];
     }
   }
 
@@ -273,7 +281,7 @@ class ApiService {
             "placa": placa,
             "marca": marca,
             "modelo": modelo,
-            "conductorId": conductorId,
+            "conductor": {"id": conductorId},
           }),
         ),
       );
@@ -292,6 +300,60 @@ class ApiService {
           message: data?["message"] ?? "La placa ya está registrada",
         );
       }
+      return ApiResult(
+        success: false,
+        message: data?["message"] ?? "Error ${response.statusCode}",
+      );
+    } catch (e) {
+      return ApiResult(success: false, message: "Error de conexión");
+    }
+  }
+
+  // TAXIS - PUT
+  static Future<ApiResult> updateTaxi({
+    required int id,
+    required String placa,
+    required String marca,
+    required String modelo,
+    int? conductorId,
+  }) async {
+    final url = Uri.parse("$baseUrl/api/taxis/$id");
+    try {
+      final response = await _retryWithRefresh(
+        () async => http.put(
+          url,
+          headers: await _authHeaders(),
+          body: jsonEncode({
+            "placa": placa,
+            "marca": marca,
+            "modelo": modelo,
+            "conductor": {"id": conductorId},
+          }),
+        ),
+      );
+
+      if (response == null) {
+        return ApiResult(success: false, message: "SESION_EXPIRADA");
+      }
+
+      debugPrint('=== UPDATE TAXI ===');
+      debugPrint('STATUS: ${response.statusCode}');
+      debugPrint('BODY: ${response.body}');
+
+      final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+
+      if (response.statusCode == 200) {
+        return ApiResult(
+          success: true,
+          message: data?["message"] ?? "Taxi actualizado",
+        );
+      } else if (response.statusCode == 404) {
+        return ApiResult(
+          success: false,
+          message: data?["message"] ?? "Taxi no encontrado",
+        );
+      }
+
       return ApiResult(
         success: false,
         message: data?["message"] ?? "Error ${response.statusCode}",

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:app_taxi/models/driver.dart';
 import 'package:app_taxi/services/api_service.dart';
 import 'package:app_taxi/screens/detail_driver_screen.dart';
@@ -27,29 +26,21 @@ class DriverScreenState extends State<DriverScreen> {
   }
 
   Future<void> fetchDrivers() async {
-    setState(() => isLoading = true);
+  setState(() => isLoading = true);
 
-    final result = await ApiService.getConductores();
+  try {
+    final driversList = await ApiService.getConductores();
 
-    if (result.success) {
-      try {
-        final List data = jsonDecode(result.message);
-        final driversList = data.map((e) => Driver.fromJson(e)).toList();
-
-        setState(() {
-          drivers = driversList;
-          filteredDrivers = driversList;
-          isLoading = false;
-        });
-      } catch (e) {
-        setState(() => isLoading = false);
-        _showError("Error al procesar datos");
-      }
-    } else {
-      setState(() => isLoading = false);
-      _showError("Error al cargar conductores");
-    }
+    setState(() {
+      drivers = driversList;
+      filteredDrivers = driversList;
+      isLoading = false;
+    });
+  } catch (e) {
+    setState(() => isLoading = false);
+    _showError("Error al cargar conductores");
   }
+}
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));

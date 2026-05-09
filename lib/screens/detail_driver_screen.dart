@@ -25,16 +25,17 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
   }
 
   void _showEditDialog() {
-    final nameController = TextEditingController(text: driver.nombre);
-    final phoneController = TextEditingController(
-      text: driver.telefono?.toString() ?? "",
-    );
+  final nameController = TextEditingController(text: driver.nombre);
+  final phoneController = TextEditingController(
+    text: driver.telefono?.toString() ?? "",
+  );
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Editar Conductor"),
-        content: Column(
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text("Editar Conductor"),
+      content: SingleChildScrollView(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
@@ -49,53 +50,56 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancelar"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final nuevoNombre = nameController.text.trim();
-              final nuevoTel = int.tryParse(phoneController.text.trim());
-
-              if (nuevoNombre.isEmpty || nuevoTel == null) return;
-              if (driver.id == null) return;
-
-              Navigator.pop(context);
-              setState(() => isUpdating = true);
-
-              final result = await ApiService.updateConducor(
-                id: driver.id!,
-                nombre: nuevoNombre,
-                cedula: driver.cedula,
-                telefono: nuevoTel,
-              );
-
-              if (mounted) {
-                setState(() => isUpdating = false);
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(result.message)));
-
-                if (result.success) {
-                  setState(() {
-                    driver = Driver(
-                      id: driver.id,
-                      nombre: nuevoNombre,
-                      cedula: driver.cedula,
-                      telefono: nuevoTel,
-                    );
-                  });
-                }
-              }
-            },
-            child: const Text("Guardar"),
-          ),
-        ],
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancelar"),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final nuevoNombre = nameController.text.trim();
+            final nuevoTel = int.tryParse(phoneController.text.trim());
+
+            if (nuevoNombre.isEmpty || nuevoTel == null) return;
+            if (driver.id == null) return;
+
+            Navigator.pop(context); // ✅ Cierra el diálogo primero
+            setState(() => isUpdating = true);
+
+            final result = await ApiService.updateConducor(
+              id: driver.id!,
+              nombre: nuevoNombre,
+              cedula: driver.cedula,
+              telefono: nuevoTel,
+            );
+
+            if (mounted) {
+              setState(() {
+                isUpdating = false;
+                // ✅ Actualiza el driver en el mismo setState
+                if (result.success) {
+                  driver = Driver(
+                    id: driver.id,
+                    nombre: nuevoNombre,
+                    cedula: driver.cedula,
+                    telefono: nuevoTel,
+                    // ⚠️ Asegúrate de pasar el estado si tu modelo lo tiene
+                  );
+                }
+              });
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(result.message)),
+              );
+            }
+          },
+          child: const Text("Guardar"),
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -137,14 +141,6 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
                     value:
                         driver.telefono?.toString() ??
                         "No disponible", // Se actualiza automáticamente
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  InfoCard(
-                    icon: Icons.directions_car,
-                    title: "Estado",
-                    value: "Disponible",
                   ),
                 ],
               ),
