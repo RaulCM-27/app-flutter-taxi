@@ -159,6 +159,7 @@ class ApiService {
     required String nombre,
     required String cedula,
     required int telefono,
+    int? taxiId,
   }) async {
     final url = Uri.parse("$baseUrl/api/conductores");
     try {
@@ -170,6 +171,7 @@ class ApiService {
             "nombre": nombre,
             "cedula": cedula,
             "telefono": telefono,
+            "taxi": {"id": taxiId},
           }),
         ),
       );
@@ -203,6 +205,7 @@ class ApiService {
     required String nombre,
     required String cedula,
     required int telefono,
+    int? taxiId,
   }) async {
     final url = Uri.parse("$baseUrl/api/conductores/$id");
     try {
@@ -214,9 +217,11 @@ class ApiService {
             "nombre": nombre,
             "cedula": cedula,
             "telefono": telefono,
+            "taxi": {"id": taxiId},
           }),
         ),
       );
+
       if (response == null) {
         return ApiResult(success: false, message: "SESION_EXPIRADA");
       }
@@ -234,6 +239,41 @@ class ApiService {
           message: data?["message"] ?? "Conductor no encontrado",
         );
       }
+      return ApiResult(
+        success: false,
+        message: data?["message"] ?? "Error ${response.statusCode}",
+      );
+    } catch (e) {
+      return ApiResult(success: false, message: "Error de conexión");
+    }
+  }
+
+  //CONDUCTOR - DELETE
+  static Future<ApiResult> deleteConductor(int id) async {
+    final url = Uri.parse("$baseUrl/api/conductores/$id");
+    try {
+      final response = await _retryWithRefresh(
+        () async => http.delete(url, headers: await _authHeaders()),
+      );
+
+      if (response == null) {
+        return ApiResult(success: false, message: "SESION_EXPIRADA");
+      }
+
+      final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return ApiResult(
+          success: true,
+          message: data?["message"] ?? "Conductor eliminado",
+        );
+      } else if (response.statusCode == 404) {
+        return ApiResult(
+          success: false,
+          message: data?["message"] ?? "Conductor no encontrado",
+        );
+      } 
+    
       return ApiResult(
         success: false,
         message: data?["message"] ?? "Error ${response.statusCode}",
@@ -269,7 +309,6 @@ class ApiService {
     required String placa,
     required String marca,
     required String modelo,
-    int? conductorId,
   }) async {
     final url = Uri.parse("$baseUrl/api/taxis");
     try {
@@ -281,7 +320,6 @@ class ApiService {
             "placa": placa,
             "marca": marca,
             "modelo": modelo,
-            "conductor": {"id": conductorId},
           }),
         ),
       );
@@ -315,7 +353,6 @@ class ApiService {
     required String placa,
     required String marca,
     required String modelo,
-    int? conductorId,
   }) async {
     final url = Uri.parse("$baseUrl/api/taxis/$id");
     try {
@@ -327,7 +364,6 @@ class ApiService {
             "placa": placa,
             "marca": marca,
             "modelo": modelo,
-            "conductor": {"id": conductorId},
           }),
         ),
       );
@@ -335,10 +371,6 @@ class ApiService {
       if (response == null) {
         return ApiResult(success: false, message: "SESION_EXPIRADA");
       }
-
-      debugPrint('=== UPDATE TAXI ===');
-      debugPrint('STATUS: ${response.statusCode}');
-      debugPrint('BODY: ${response.body}');
 
       final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
 
@@ -351,6 +383,46 @@ class ApiService {
         return ApiResult(
           success: false,
           message: data?["message"] ?? "Taxi no encontrado",
+        );
+      }
+
+      return ApiResult(
+        success: false,
+        message: data?["message"] ?? "Error ${response.statusCode}",
+      );
+    } catch (e) {
+      return ApiResult(success: false, message: "Error de conexión");
+    }
+  }
+
+  // TAXIS - DELETE
+  static Future<ApiResult> deleteTaxi(int id) async {
+    final url = Uri.parse("$baseUrl/api/taxis/$id");
+    try {
+      final response = await _retryWithRefresh(
+        () async => http.delete(url, headers: await _authHeaders()),
+      );
+
+      if (response == null) {
+        return ApiResult(success: false, message: "SESION_EXPIRADA");
+      }
+
+      final data = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return ApiResult(
+          success: true,
+          message: data?["message"] ?? "Taxi eliminado",
+        );
+      } else if (response.statusCode == 404) {
+        return ApiResult(
+          success: false,
+          message: data?["message"] ?? "Taxi no encontrado",
+        );
+      } else if (response.statusCode == 409) {
+        return ApiResult(
+          success: false,
+          message: data?["message"] ?? "El taxi tiene un conductor asignado",
         );
       }
 

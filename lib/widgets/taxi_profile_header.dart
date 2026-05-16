@@ -43,25 +43,7 @@ class TaxiProfileHeader extends StatelessWidget {
 
         const SizedBox(height: 5),
 
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 5,
-          ),
-
-          decoration: BoxDecoration(
-            color: Colors.green,
-            borderRadius: BorderRadius.circular(10),
-          ),
-
-          child: const Text(
-            "Disponible",
-
-            style: TextStyle(
-              color: Colors.white,
-            ),
-          ),
-        ),
+        
       ],
     );
   }

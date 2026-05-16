@@ -59,16 +59,6 @@ class DriverCard extends StatelessWidget {
             ),
           ),
 
-          /// Estado
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Text("Libre"),
-          ),
-
           const SizedBox(width: 8),
 
           const Icon(Icons.chevron_right),

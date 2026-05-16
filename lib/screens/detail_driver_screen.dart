@@ -16,6 +16,7 @@ class DetailDriverScreen extends StatefulWidget {
 
 class _DetailDriverScreenState extends State<DetailDriverScreen> {
   late Driver driver;
+
   bool isUpdating = false;
 
   @override
@@ -24,82 +25,128 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
     driver = widget.driver;
   }
 
-  void _showEditDialog() {
-  final nameController = TextEditingController(text: driver.nombre);
-  final phoneController = TextEditingController(
-    text: driver.telefono?.toString() ?? "",
-  );
+  void _eliminarConductor() async {
+    if (driver.id == null) return;
 
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text("Editar Conductor"),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: "Nombre"),
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Eliminar Conductor"),
+          content: const Text("¿Seguro que deseas eliminar este conductor?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancelar"),
             ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: phoneController,
-              decoration: const InputDecoration(labelText: "Teléfono"),
-              keyboardType: TextInputType.phone,
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text("Eliminar"),
             ),
           ],
+        );
+      },
+    );
+
+    if (confirmar != true) return;
+
+    setState(() {
+      isUpdating = true;
+    });
+
+    final result = await ApiService.deleteConductor(driver.id!);
+
+    if (!mounted) return;
+
+    setState(() {
+      isUpdating = false;
+    });
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(result.message)));
+
+    if (result.success) {
+      Navigator.pop(context, true);
+    }
+  }
+
+  void _showEditDialog() {
+    final nameController = TextEditingController(text: driver.nombre);
+    final phoneController = TextEditingController(
+      text: driver.telefono?.toString() ?? "",
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Editar Conductor"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: "Nombre"),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: phoneController,
+                decoration: const InputDecoration(labelText: "Teléfono"),
+                keyboardType: TextInputType.phone,
+              ),
+            ],
+          ),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancelar"),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            final nuevoNombre = nameController.text.trim();
-            final nuevoTel = int.tryParse(phoneController.text.trim());
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancelar"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final nuevoNombre = nameController.text.trim();
+              final nuevoTel = int.tryParse(phoneController.text.trim());
 
-            if (nuevoNombre.isEmpty || nuevoTel == null) return;
-            if (driver.id == null) return;
+              if (nuevoNombre.isEmpty || nuevoTel == null) return;
+              if (driver.id == null) return;
 
-            Navigator.pop(context); // ✅ Cierra el diálogo primero
-            setState(() => isUpdating = true);
+              Navigator.pop(context); // ✅ Cierra el diálogo primero
+              setState(() => isUpdating = true);
 
-            final result = await ApiService.updateConducor(
-              id: driver.id!,
-              nombre: nuevoNombre,
-              cedula: driver.cedula,
-              telefono: nuevoTel,
-            );
-
-            if (mounted) {
-              setState(() {
-                isUpdating = false;
-                // ✅ Actualiza el driver en el mismo setState
-                if (result.success) {
-                  driver = Driver(
-                    id: driver.id,
-                    nombre: nuevoNombre,
-                    cedula: driver.cedula,
-                    telefono: nuevoTel,
-                    // ⚠️ Asegúrate de pasar el estado si tu modelo lo tiene
-                  );
-                }
-              });
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(result.message)),
+              final result = await ApiService.updateConducor(
+                id: driver.id!,
+                nombre: nuevoNombre,
+                cedula: driver.cedula,
+                telefono: nuevoTel,
               );
-            }
-          },
-          child: const Text("Guardar"),
-        ),
-      ],
-    ),
-  );
-}
+
+              if (mounted) {
+                setState(() {
+                  isUpdating = false;
+                  // ✅ Actualiza el driver en el mismo setState
+                  if (result.success) {
+                    driver = Driver(
+                      id: driver.id,
+                      nombre: nuevoNombre,
+                      cedula: driver.cedula,
+                      telefono: nuevoTel,
+                    );
+                  }
+                });
+
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(result.message)));
+              }
+            },
+            child: const Text("Guardar"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +180,7 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
                     value: driver.cedula,
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
                   InfoCard(
                     icon: Icons.phone,
@@ -141,7 +188,8 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
                     value:
                         driver.telefono?.toString() ??
                         "No disponible", // Se actualiza automáticamente
-                  ),
+                  ),           
+
                 ],
               ),
             ),
@@ -159,6 +207,8 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
+
+                  /// BOTÓN MODIFICAR
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
@@ -167,6 +217,28 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
                       label: const Text("Modificar Datos"),
                     ),
                   ),
+
+                  const SizedBox(height: 10),
+
+                  ///BOTÓN ELIMINAR
+                  SizedBox(
+                    width: double.infinity,
+
+                    child: ElevatedButton.icon(
+                      onPressed: _eliminarConductor,
+
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+
+                      icon: const Icon(Icons.delete),
+
+                      label: const Text("Eliminar Conductor"),
+                    ),
+                  ),
+
                   const SizedBox(height: 10),
 
                   /// BOTÓN VOLVER

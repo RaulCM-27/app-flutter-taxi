@@ -15,8 +15,53 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController cedulaController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
+  final TextEditingController placaController = TextEditingController();
 
   bool loading = false;
+
+  List<dynamic> taxis = [];
+  List<dynamic> taxisFiltrados = [];
+  dynamic taxiSeleccionado;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarTaxis();
+    placaController.addListener(_filtrarTaxis);
+  }
+
+  void _cargarTaxis() async {
+    final result = await ApiService.getTaxis();
+    setState(() {
+      taxis = result; // List<Taxi>
+    });
+  }
+
+  void _filtrarTaxis() {
+    if (taxiSeleccionado != null) return;
+
+    final query = placaController.text.trim();
+    setState(() {
+      if (query.isEmpty) {
+        taxisFiltrados = [];
+      } else {
+        taxisFiltrados = taxis
+            .where(
+              (t) => t.placa.toString().contains(query),
+            ) // ✅ t.placa no t['placa']
+            .toList();
+      }
+    });
+  }
+
+  void _seleccionarTaxi(dynamic taxi) {
+    setState(() {
+      taxiSeleccionado = taxi;
+      placaController.text = taxi.placa.toString();
+      taxisFiltrados =
+          []; // Asegúrate de convertir a String si placa no es String
+    });
+  }
 
   void registrarConductor() async {
     FocusScope.of(context).unfocus();
@@ -30,8 +75,8 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
       return;
     }
 
-    if (phoneController.text.length < 10) {
-      _showMessage("Teléfono inválido");
+    if (taxiSeleccionado == null) {
+      _showMessage("Selecciona un taxi válido");
       return;
     }
 
@@ -42,10 +87,10 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
         nombre: nombre,
         cedula: cedula,
         telefono: telefono,
+        taxiId: taxiSeleccionado.id,
       );
 
       if (!mounted) return;
-
       setState(() => loading = false);
 
       if (result.success) {
@@ -72,6 +117,7 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
     nameController.dispose();
     cedulaController.dispose();
     phoneController.dispose();
+    placaController.dispose();
     super.dispose();
   }
 
@@ -81,16 +127,13 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
       backgroundColor: const Color(0xFFF2F4F7),
 
       body: SafeArea(
-        // ✅ AQUÍ ESTÁ LA CLAVE
         child: Column(
           children: [
-            // 🔵 HEADER
             ScreenHeader(
               title: 'Nuevo Conductor',
               onBack: () => Navigator.pop(context),
             ),
 
-            // 🔽 CONTENIDO
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -138,6 +181,70 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
                             controller: phoneController,
                             keyboardType: TextInputType.phone,
                           ),
+
+                          const SizedBox(height: 16),
+
+                          ModernInput(
+                            label: "Placa del Taxi *",
+                            hint: "Escribe la placa",
+                            controller: placaController,
+                          ),
+
+                          if (taxisFiltrados.isNotEmpty)
+                            Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: taxisFiltrados.length,
+                                itemBuilder: (context, index) {
+                                  final t = taxisFiltrados[index];
+                                  return ListTile(
+                                    leading: const Icon(
+                                      Icons.local_taxi,
+                                      color: Colors.blue,
+                                    ),
+                                    title: Text(t.placa),
+                                    subtitle: Text("${t.marca} - ${t.modelo}"),
+                                    onTap: () => _seleccionarTaxi(t),
+                                  );
+                                },
+                              ),
+                            ),
+
+                          if (taxiSeleccionado != null)
+                            Container(
+                              margin: const EdgeInsets.only(top: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.green.shade300,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "${taxiSeleccionado.nombre}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
                           const SizedBox(height: 24),
                           SaveButton(
                             loading: loading,

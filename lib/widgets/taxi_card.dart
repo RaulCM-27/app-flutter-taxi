@@ -53,15 +53,7 @@ class TaxiCard extends StatelessWidget {
             ),
           ),
 
-          /// Badge de Activo
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Text("Activo"),
-          ),
+          
 
           const SizedBox(width: 8),
 
