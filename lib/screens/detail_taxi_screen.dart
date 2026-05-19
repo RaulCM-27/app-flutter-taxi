@@ -124,16 +124,6 @@ class _DetailTaxiScreenState extends State<DetailTaxiScreen> {
 
                     value: taxi.modelo,
                   ),
-
-                  const SizedBox(height: 12),
-
-                  InfoCard(
-                    icon: Icons.person,
-
-                    title: "Conductor",
-
-                    value: taxi.conductor?.nombre ?? "No asignado",
-                  ),
                 ],
               ),
             ),

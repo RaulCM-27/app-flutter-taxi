@@ -3,12 +3,14 @@ class Driver {
   final String nombre;
   final String cedula;
   final int? telefono;
+  final String? placaTaxi;
 
   Driver({
     this.id,
     required this.nombre,
     required this.cedula,
     this.telefono,
+    this.placaTaxi,
   });
 
   factory Driver.fromJson(Map<String, dynamic> json) {
@@ -18,6 +20,9 @@ class Driver {
       cedula: json['cedula'] ?? '',
       telefono: json['telefono'] != null
           ? int.parse(json['telefono'].toString())
+          : null,
+      placaTaxi: json['taxi'] != null
+          ? json['taxi']['placa']
           : null,
     );
   }

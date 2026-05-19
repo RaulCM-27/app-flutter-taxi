@@ -180,7 +180,7 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
                     value: driver.cedula,
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
 
                   InfoCard(
                     icon: Icons.phone,
@@ -188,8 +188,15 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
                     value:
                         driver.telefono?.toString() ??
                         "No disponible", // Se actualiza automáticamente
-                  ),           
+                  ),   
 
+                  const SizedBox(height: 12),
+
+                  InfoCard(
+                    icon: Icons.taxi_alert,
+                    title: "Placa del Taxi",
+                    value: driver.placaTaxi ?? "No disponible",    
+                  )   
                 ],
               ),
             ),

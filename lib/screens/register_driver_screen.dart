@@ -3,6 +3,7 @@ import 'package:app_taxi/widgets/modern_input.dart';
 import 'package:app_taxi/widgets/save_button.dart';
 import 'package:app_taxi/services/api_service.dart';
 import 'package:app_taxi/widgets/screen_header.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class RegisterDriverScreen extends StatefulWidget {
   const RegisterDriverScreen({super.key});
@@ -90,11 +91,14 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
         taxiId: taxiSeleccionado.id,
       );
 
+      print("✅ success: ${result.success}"); // ← agrega esto
+      print("✅ message: ${result.message}");
+
       if (!mounted) return;
       setState(() => loading = false);
 
       if (result.success) {
-        Navigator.pop(context, true); // 👈 clave
+        _mostrarQR(nombre: nombre, placa: taxiSeleccionado.placa);
       } else {
         _showMessage(result.message);
       }
@@ -110,6 +114,52 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _mostrarQR({required String nombre, required String placa}) {
+    final data = '$placa - $nombre';
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("QR Generado"),
+          content: SizedBox(
+            // ✅ tamaño fijo, evita el error
+            width: 260,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  // ✅ tamaño fijo al QR
+                  width: 220,
+                  height: 220,
+                  child: QrImageView(data: data, version: QrVersions.auto),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  data,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // cierra QR
+                Navigator.pop(context, true); // vuelve a la lista
+              },
+              child: const Text("Cerrar"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -235,7 +285,7 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    "${taxiSeleccionado.nombre}",
+                                    "${taxiSeleccionado.placa}",
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.green,
