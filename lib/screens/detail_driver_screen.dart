@@ -1,9 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:app_taxi/models/driver.dart';
 import 'package:app_taxi/services/api_service.dart';
 import 'package:app_taxi/widgets/screen_header.dart';
 import 'package:app_taxi/widgets/info_card.dart';
 import 'package:app_taxi/widgets/driver_profile_header.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:saver_gallery/saver_gallery.dart';
 
 class DetailDriverScreen extends StatefulWidget {
   final Driver driver;
@@ -16,13 +22,58 @@ class DetailDriverScreen extends StatefulWidget {
 
 class _DetailDriverScreenState extends State<DetailDriverScreen> {
   late Driver driver;
-
   bool isUpdating = false;
+  final ScreenshotController _screenshotController = ScreenshotController();
 
   @override
   void initState() {
     super.initState();
     driver = widget.driver;
+  }
+
+  // ✅ captura el QR como imagen
+  Future<File?> _capturarQR() async {
+    final image = await _screenshotController.capture();
+    if (image == null) return null;
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/qr_${driver.cedula}.png');
+    await file.writeAsBytes(image);
+    return file;
+  }
+
+  // ✅ descarga en galería
+  Future<void> _descargarQR() async {
+    final image = await _screenshotController.capture();
+    if (image == null) return;
+
+    final result = await SaverGallery.saveImage(
+      image,
+      fileName: 'qr_${driver.cedula}',
+      androidRelativePath: "Pictures",
+      skipIfExists: false,
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.isSuccess
+              ? "QR guardado en galería ✅"
+              : "No se pudo guardar ❌",
+        ),
+      ),
+    );
+  }
+
+  // ✅ compartir
+  Future<void> _compartirQR() async {
+    final file = await _capturarQR();
+    if (file == null) return;
+
+    await Share.shareXFiles([
+      XFile(file.path),
+    ], text: 'QR de ${driver.nombre} - ${driver.placaTaxi}');
   }
 
   void _eliminarConductor() async {
@@ -51,25 +102,16 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
 
     if (confirmar != true) return;
 
-    setState(() {
-      isUpdating = true;
-    });
-
+    setState(() => isUpdating = true);
     final result = await ApiService.deleteConductor(driver.id!);
-
     if (!mounted) return;
-
-    setState(() {
-      isUpdating = false;
-    });
+    setState(() => isUpdating = false);
 
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(result.message)));
 
-    if (result.success) {
-      Navigator.pop(context, true);
-    }
+    if (result.success) Navigator.pop(context, true);
   }
 
   void _showEditDialog() {
@@ -112,7 +154,7 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
               if (nuevoNombre.isEmpty || nuevoTel == null) return;
               if (driver.id == null) return;
 
-              Navigator.pop(context); // ✅ Cierra el diálogo primero
+              Navigator.pop(context);
               setState(() => isUpdating = true);
 
               final result = await ApiService.updateConducor(
@@ -125,13 +167,13 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
               if (mounted) {
                 setState(() {
                   isUpdating = false;
-                  // ✅ Actualiza el driver en el mismo setState
                   if (result.success) {
                     driver = Driver(
                       id: driver.id,
                       nombre: nuevoNombre,
                       cedula: driver.cedula,
                       telefono: nuevoTel,
+                      placaTaxi: driver.placaTaxi,
                     );
                   }
                 });
@@ -150,6 +192,10 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final qrData = driver.placaTaxi != null
+        ? '${driver.placaTaxi} - ${driver.nombre}'
+        : null;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF2F3F5),
       body: SafeArea(
@@ -159,45 +205,109 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
               title: 'Detalle de Conductores',
               onBack: () => Navigator.pop(context),
             ),
-
             const SizedBox(height: 20),
-
-            /// 🔹 AVATAR + NOMBRE
-            DriverProfileHeader(
-              driver: driver,
-            ), // Se actualiza automáticamente al cambiar el estado
-
+            DriverProfileHeader(driver: driver),
             const SizedBox(height: 20),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    InfoCard(
+                      icon: Icons.badge,
+                      title: "Cédula",
+                      value: driver.cedula,
+                    ),
+                    const SizedBox(height: 12),
+                    InfoCard(
+                      icon: Icons.phone,
+                      title: "Teléfono",
+                      value: driver.telefono?.toString() ?? "No disponible",
+                    ),
+                    const SizedBox(height: 12),
+                    InfoCard(
+                      icon: Icons.taxi_alert,
+                      title: "Placa del Taxi",
+                      value: driver.placaTaxi ?? "No disponible",
+                    ),
 
-            /// 🔹 INFORMACIÓN
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  InfoCard(
-                    icon: Icons.badge,
-                    title: "Cédula",
-                    value: driver.cedula,
-                  ),
+                    const SizedBox(height: 12),
 
-                  const SizedBox(height: 12),
+                    if (qrData != null)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text(
+                              "Código QR",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
 
-                  InfoCard(
-                    icon: Icons.phone,
-                    title: "Teléfono",
-                    value:
-                        driver.telefono?.toString() ??
-                        "No disponible", // Se actualiza automáticamente
-                  ),   
+                            // ✅ envuelve el QR con Screenshot
+                            Screenshot(
+                              controller: _screenshotController,
+                              child: Container(
+                                color: Colors.white,
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(
+                                      width: 200,
+                                      height: 200,
+                                      child: QrImageView(
+                                        data: qrData,
+                                        version: QrVersions.auto,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      qrData,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
 
-                  const SizedBox(height: 12),
+                            const SizedBox(height: 12),
 
-                  InfoCard(
-                    icon: Icons.taxi_alert,
-                    title: "Placa del Taxi",
-                    value: driver.placaTaxi ?? "No disponible",    
-                  )   
-                ],
+                            // ✅ botones compartir y descargar
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: _compartirQR,
+                                  icon: const Icon(Icons.share),
+                                  label: const Text("Compartir"),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: _descargarQR,
+                                  icon: const Icon(Icons.download),
+                                  label: const Text("Descargar"),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
 
@@ -207,15 +317,10 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
                 child: CircularProgressIndicator(),
               ),
 
-            const Spacer(),
-
-            /// 🔹 BOTONES
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-
-                  /// BOTÓN MODIFICAR
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
@@ -224,37 +329,25 @@ class _DetailDriverScreenState extends State<DetailDriverScreen> {
                       label: const Text("Modificar Datos"),
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
-                  ///BOTÓN ELIMINAR
                   SizedBox(
                     width: double.infinity,
-
                     child: ElevatedButton.icon(
                       onPressed: _eliminarConductor,
-
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-
                       icon: const Icon(Icons.delete),
-
                       label: const Text("Eliminar Conductor"),
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
-                  /// BOTÓN VOLVER
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
+                      onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2E4E73),
                         foregroundColor: Colors.white,
