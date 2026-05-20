@@ -1,11 +1,16 @@
-/// Used in: register_driver_screen.dart
 import 'package:flutter/material.dart';
 
 class SaveButton extends StatelessWidget {
   final bool loading;
   final VoidCallback onPressed;
+  final String text;
 
-  const SaveButton({super.key, required this.loading, required this.onPressed});
+  const SaveButton({
+    super.key,
+    required this.loading,
+    required this.onPressed,
+    required this.text,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +22,7 @@ class SaveButton extends StatelessWidget {
           : ElevatedButton.icon(
               onPressed: onPressed,
               icon: const Icon(Icons.save),
-              label: const Text("Guardar Conductor"),
+              label: Text(text),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blueGrey,
                 foregroundColor: Colors.white,

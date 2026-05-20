@@ -249,6 +249,7 @@ class _RegisterDriverScreenState extends State<RegisterDriverScreen> {
                           SaveButton(
                             loading: loading,
                             onPressed: registrarConductor,
+                            text: "Registrar Conductor",
                           ),
                         ],
                       ),

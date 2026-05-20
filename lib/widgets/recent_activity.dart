@@ -17,7 +17,7 @@ class RecentActivity extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
               Text(
-                'Ultima Actividad',
+                'Cola de Espera',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               Text('Ver todo', style: TextStyle(color: Colors.blue)),

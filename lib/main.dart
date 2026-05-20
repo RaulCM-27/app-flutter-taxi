@@ -13,11 +13,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      navigatorKey: SessionManager.navigatorKey, // ✅
+      navigatorKey: SessionManager.navigatorKey,
       initialRoute: '/login',
+
       routes: {
-        '/login': (context) => LoginScreen(),
-        '/home': (context) => HomeScreen(username: ''),
+        '/login': (context) => const LoginScreen(),
+
+        '/home': (context) {
+          final username =
+              ModalRoute.of(context)!.settings.arguments as String;
+
+          return HomeScreen(username: username);
+        },
       },
     );
   }

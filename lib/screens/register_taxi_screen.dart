@@ -131,6 +131,7 @@ class _RegisterTaxiScreenState extends State<RegisterTaxiScreen> {
                           SaveButton(
                             loading: loading,
                             onPressed: registrarTaxi,
+                            text: "Registrar Taxi",
                           ),
                         ],
                       ),

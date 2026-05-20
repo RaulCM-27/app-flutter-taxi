@@ -46,8 +46,6 @@ class MenuGrid extends StatelessWidget {
             label: 'Nuevo Conductor',
             onTap: () => _navigateToRegisterDriver(context),
           ),
-          MenuCard(icon: Icons.swap_horiz, label: 'Asignar Turno'),
-          MenuCard(icon: Icons.description, label: 'Reportes'),
         ],
       ),
     );
